@@ -6,10 +6,13 @@ import android.os.Build;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class AI {
     @TargetApi(Build.VERSION_CODES.O)
-    public static String getAnswer(String user_question) {
+    public static void getAnswer(String user_question, final Consumer<String> callback) {
 
         Map<String, String> database = new HashMap<String, String>() {{
             put("привет", "И вам здрасте");
@@ -21,7 +24,7 @@ public class AI {
 
         user_question = user_question.toLowerCase();
 
-        ArrayList<String> answers = new ArrayList<>();
+        final ArrayList<String> answers = new ArrayList<>();
 
         for (String database_question : database.keySet()) {
             if (user_question.contains(database_question)) {
@@ -29,10 +32,23 @@ public class AI {
             }
         }
 
-
-        if (answers.isEmpty()) {
-            return "Ок";
+        Pattern cityPattern = Pattern.compile("какая погода в городе (\\p{L}+)", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = cityPattern.matcher(user_question);
+        if (matcher.find()) {
+            String cityName = matcher.group(1);
+            Weather.get(cityName, new Consumer<String>() {
+                @Override
+                public void accept(String s) {
+                    answers.add(s);
+                    callback.accept(String.join(", ", answers));
+                }
+            });
+        } else {
+            if (answers.isEmpty()) {
+                callback.accept("Ок");
+                return;
+            }
+            callback.accept(String.join(", ", answers));
         }
-        return String.join(", ", answers);
     }
 }
